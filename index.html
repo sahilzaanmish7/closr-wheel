@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Closr Wheel Tokens</title>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&family=Instrument+Serif&family=Cormorant+Garamond:wght@300&display=swap" rel="stylesheet">
+
+  <!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  ADMIN SETUP: edit CONFIG below, then save                   ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║                                                              ║
+  ║  STEP 1: Google Cloud Console (console.cloud.google.com)     ║
+  ║    › New project (or use existing)                           ║
+  ║    › APIs & Services → Library → enable:                     ║
+  ║        • Google Sheets API                                   ║
+  ║    › Credentials → Create → OAuth 2.0 Client ID             ║
+  ║        • Type: Web application                               ║
+  ║        • Authorized JavaScript origins:                      ║
+  ║          Add the URL this file is served from, e.g.          ║
+  ║          http://localhost:5500  or  https://yoursite.com     ║
+  ║          (file:// URLs do NOT work, needs a web server)      ║
+  ║    › Copy the Client ID into CLIENT_ID below                 ║
+  ║                                                              ║
+  ║  STEP 2: Google Sheet format                                 ║
+  ║    Tab name: Tokens  (or change SHEET_TAB below)             ║
+  ║    Row 1: headers (skipped)                                  ║
+  ║    Col A: work email (lowercase)                             ║
+  ║    Col B: display name                                       ║
+  ║    Col C: token count (number)                               ║
+  ║    Share the sheet: Anyone with link → Viewer                ║
+  ║    Copy the Sheet ID from its URL into SHEET_ID below        ║
+  ║                                                              ║
+  ║  STEP 3: Serve this file over HTTP (not file://)             ║
+  ║    Quickest option: in the same folder run                   ║
+  ║      npx serve .   →  open http://localhost:3000             ║
+  ║    Or use VS Code Live Server, GitHub Pages, etc.            ║
+  ║                                                              ║
+  ╚══════════════════════════════════════════════════════════════╝
+  -->
+  <script>
+    const CONFIG = {
+      CLIENT_ID : '51775475371-q7ri44jp0hokr66e4f3nl7hmvcri5phn.apps.googleusercontent.com',
+      SHEET_ID  : '1W3fSo_wxC2qXvON2_rJcjJq-dBWh2J-gztPh3OC-fWI',
+      SHEET_TAB : 'Tokens',
+    };
+    // Columns: A = Email | B = Name | C = Tokens | Row 1 = header (auto-skipped)
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #070909;
+      --surface:      #161E1C;
+      --surface2:     #1E2A27;
+      --border:       #1B2724;
+      --text:         #EDF2EE;
+      --muted:        #557268;
+      --accent:       #13BE94;
+      --accent-glow:  rgba(19,190,148,0.20);
+      --accent-dim:   rgba(19,190,148,0.10);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* ── SCREENS ── */
+    .screen { display: none; }
+    .screen.active { display: flex; }
+
+    /* ── LOGIN ── */
+    #screen-login {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 24px;
+      gap: 28px;
+    }
+
+    .wordmark svg { display: block; overflow: visible; }
+
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .login-card h1 {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+
+    .login-card p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-top: 10px;
+    }
+
+    .google-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #fff;
+      color: #3c4043;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 20px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: box-shadow 0.15s, opacity 0.15s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      width: 100%;
+    }
+    .google-btn:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+    .google-btn:active { opacity: 0.9; transform: scale(0.99); }
+
+    .google-btn svg { flex-shrink: 0; }
+
+    /* Setup warning */
+    .setup-warn {
+      background: rgba(255,80,80,0.1);
+      border: 1px solid rgba(255,80,80,0.3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #ff9090;
+      line-height: 1.5;
+    }
+    .setup-warn code {
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* ── LOADING ── */
+    #screen-loading {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      gap: 18px;
+    }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { font-size: 15px; color: var(--muted); font-weight: 500; }
+
+    /* ── STATUS (not found / no tokens / error) ── */
+    #screen-status {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 32px 24px;
+      text-align: center;
+      gap: 14px;
+    }
+
+    .status-icon  { font-size: 52px; line-height: 1; }
+    .status-title { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; }
+    .status-msg   { font-size: 14px; color: var(--muted); max-width: 300px; line-height: 1.55; }
+
+    .btn-ghost-full {
+      margin-top: 6px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 12px 28px;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-ghost-full:hover { color: var(--text); border-color: #404055; }
+
+    /* ── WHEEL SCREEN ── */
+    #screen-wheel {
+      flex-direction: column;
+      align-items: center;
+      min-height: 100dvh;
+      padding: 20px 16px 36px;
+      gap: 18px;
+    }
+
+    .wheel-header {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+    }
+
+    .player-info { display: flex; flex-direction: column; gap: 1px; }
+    .player-label { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; }
+    .player-name-disp { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+
+    .token-pill {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 100px;
+      padding: 7px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+      transition: opacity 0.3s;
+    }
+
+    /* Wheel */
+    .wheel-outer {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pointer-wrap {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ptr-arrow {
+      width: 0; height: 0;
+      border-left: 11px solid transparent;
+      border-right: 11px solid transparent;
+      border-top: 26px solid var(--accent);
+      filter: drop-shadow(0 0 8px var(--accent-glow));
+    }
+    .ptr-stem {
+      width: 4px; height: 10px;
+      background: var(--accent);
+      border-radius: 0 0 3px 3px;
+      margin-top: -2px;
+    }
+
+    #wheel-canvas { display: block; border-radius: 50%; }
+
+    /* Spin button */
+    .spin-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 100px;
+      padding: 17px 52px;
+      font-family: inherit;
+      font-size: 17px;
+      font-weight: 800;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 8px 32px var(--accent-glow);
+    }
+    .spin-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(19,190,148,0.35); }
+    .spin-btn:active:not(:disabled) { transform: scale(0.97); }
+    .spin-btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; transform: none; }
+
+    /* History */
+    .history-wrap { width: 100%; max-width: 520px; }
+    .history-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; padding: 0 4px; }
+    .history-list  { display: flex; flex-direction: column; gap: 6px; }
+    .h-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 14px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn {
+      from { opacity:0; transform:scale(0.93); }
+      to   { opacity:1; transform:scale(1);    }
+    }
+    .h-icon  { font-size: 20px; line-height: 1; }
+    .h-prize { font-size: 14px; font-weight: 600; flex: 1; }
+    .h-num   { font-size: 12px; color: var(--muted); }
+
+    /* ── RESULT MODAL ── */
+    #modal-result {
+      position: fixed; inset: 0; z-index: 100;
+      align-items: flex-end; justify-content: center;
+      padding: 0 16px 16px;
+      display: none;
+    }
+    #modal-result.open { display: flex; }
+
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(6px);
+    }
+    .modal-card {
+      position: relative; z-index: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 36px 28px 28px;
+      width: 100%; max-width: 400px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      animation: slideUp 0.38s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(80px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .m-icon-wrap { width:80px; height:80px; background:var(--surface2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:42px; }
+    .m-eyebrow   { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+    .m-prize     { font-size:26px; font-weight:800; text-align:center; letter-spacing:-0.3px; line-height:1.2; }
+    .m-actions   { display:flex; gap:10px; width:100%; margin-top:8px; }
+
+    .btn-ghost {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 13px;
+      color: var(--text);
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-ghost:hover { background: var(--surface2); }
+
+    .btn-primary {
+      background: var(--accent); color: #000; border: none;
+      border-radius: 13px; padding: 13px;
+      font-family: inherit; font-size: 14px; font-weight: 800;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+
+    /* ── EVERYONE WINS ── */
+    #modal-everyone {
+      position: fixed; inset: 0; z-index: 200;
+      flex-direction: column; align-items: center; justify-content: center;
+      background: #070909;
+      padding: 32px 24px; text-align: center; gap: 20px;
+      display: none;
+    }
+    #modal-everyone.open { display: flex; }
+
+    .ew-eyebrow   { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; }
+    .ew-headline  { font-size:clamp(44px,12vw,72px); font-weight:800; color:var(--accent); letter-spacing:-2px; line-height:0.95; }
+    .ew-spinner   { font-size:15px; color:var(--muted); margin-top:4px; }
+    .ew-card      { background:var(--surface); border:1px solid var(--accent); border-radius:22px; padding:28px 44px; display:flex; flex-direction:column; align-items:center; gap:8px; box-shadow:0 0 60px var(--accent-glow); }
+    .ew-card-icon { font-size:52px; line-height:1; }
+    .ew-card-text { font-size:22px; font-weight:800; letter-spacing:-0.3px; }
+    .ew-footer    { font-size:13px; color:var(--muted); max-width:280px; line-height:1.5; }
+
+    .btn-primary-full {
+      background: var(--accent); color: #000; border: none;
+      border-radius: 100px; padding: 16px;
+      font-family: inherit; font-size: 15px; font-weight: 800;
+      cursor: pointer; width: 100%; max-width: 280px;
+      transition: opacity 0.15s;
+    }
+    .btn-primary-full:hover { opacity: 0.88; }
+
+    /* ── DONE ── */
+    #screen-done {
+      flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100dvh; padding: 24px; gap: 20px; text-align: center;
+    }
+    .done-emoji { font-size: 56px; }
+    .done-title { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .done-sub   { font-size: 14px; color: var(--muted); }
+    .done-card  { width:100%; max-width:360px; background:var(--surface); border:1px solid var(--border); border-radius:20px; overflow:hidden; }
+    .d-item     { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--border); font-size:14px; }
+    .d-item:last-child { border-bottom: none; }
+    .d-item-icon { font-size: 20px; }
+    .d-item-name { font-weight: 600; flex: 1; text-align: left; }
+    .d-item-num  { font-size: 12px; color: var(--muted); }
+
+    .btn-new {
+      background: transparent; border: 1px solid var(--border); border-radius: 100px;
+      padding: 13px 30px; color: var(--muted);
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-new:hover { color: var(--text); border-color: #404055; }
+
+    /* ── CONFETTI ── */
+    #confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 400; }
+
+    /* ── ANIMATED BACKGROUND ── */
+    #bg-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+<!-- ─── ANIMATED BACKGROUND ─── -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- ─── LOGIN ─── -->
+<div id="screen-login" class="screen active">
+  <div class="wordmark">
+  <svg viewBox="0 0 200 34" fill="none" width="260" height="44" style="overflow:visible">
+    <text x="0" y="27" font-family="Cormorant Garamond, Georgia, serif" font-size="28" font-weight="300" fill="#EDF2EE">C</text>
+    <text x="20" y="27" font-family="Cormorant Garamond, Georgia, serif" font-size="28" font-weight="300" fill="#EDF2EE">L</text>
+    <g transform="translate(56,18)">
+      <circle r="11" stroke="#13BE94" stroke-width="1.15" fill="none"/>
+      <circle r="6.6" stroke="#13BE94" stroke-width="1.15" fill="none"/>
+      <circle r="2.1" fill="#13BE94"/>
+      <line x1="-12.2" y1="0" x2="-7.1" y2="0" stroke="#13BE94" stroke-width="1.15" stroke-linecap="round"/>
+      <line x1="7.1" y1="0" x2="12.2" y2="0" stroke="#13BE94" stroke-width="1.15" stroke-linecap="round"/>
+      <line x1="0" y1="-12.2" x2="0" y2="-7.1" stroke="#13BE94" stroke-width="1.15" stroke-linecap="round"/>
+      <line x1="0" y1="7.1" x2="0" y2="12.2" stroke="#13BE94" stroke-width="1.15" stroke-linecap="round"/>
+    </g>
+    <text x="75" y="27" font-family="Cormorant Garamond, Georgia, serif" font-size="28" font-weight="300" fill="#EDF2EE">S</text>
+    <text x="91" y="27" font-family="Cormorant Garamond, Georgia, serif" font-size="28" font-weight="300" fill="#EDF2EE">R</text>
+  </svg>
+</div>
+  <div class="login-card">
+    <div>
+      <h1>Monthly<br>Reward Wheel</h1>
+      <p>Sign in with your work Google account. Your tokens are waiting.</p>
+    </div>
+    <button class="google-btn" onclick="handleSignIn()">
+      <!-- Google "G" logo -->
+      <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.3 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.8 6C12.3 13.2 17.7 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 2.9-2.2 5.4-4.6 7l7.3 5.7c4.3-4 6.8-9.8 6.8-16.7z"/>
+        <path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.7-4.6l-7.8-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.7 10.7l7.8-6.1z"/>
+        <path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.5-5.7l-7.3-5.7c-2.1 1.4-4.8 2.2-8.2 2.2-6.3 0-11.6-3.7-13.5-9l-7.8 6C6.7 42.6 14.7 48 24 48z"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div id="setup-warn" class="setup-warn" style="display:none">
+      <strong>Setup needed.</strong> Edit <code>CLIENT_ID</code> and <code>SHEET_ID</code> at the top of this file, then serve it over HTTP (not <code>file://</code>).
+    </div>
+  </div>
+</div>
+
+<!-- ─── LOADING ─── -->
+<div id="screen-loading" class="screen">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Finding your tokens...</div>
+</div>
+
+<!-- ─── STATUS (errors / not found / no tokens) ─── -->
+<div id="screen-status" class="screen">
+  <div class="status-icon"  id="status-icon">🤷</div>
+  <div class="status-title" id="status-title">Hmm.</div>
+  <div class="status-msg"   id="status-msg">Something went wrong.</div>
+  <button class="btn-ghost-full" onclick="show('screen-login')">← Try again</button>
+</div>
+
+<!-- ─── WHEEL ─── -->
+<div id="screen-wheel" class="screen">
+  <div class="wheel-header">
+    <div class="player-info">
+      <div class="player-label">Spinning for</div>
+      <div class="player-name-disp" id="display-name"></div>
+    </div>
+    <div class="token-pill" id="display-tokens">0 spins left</div>
+  </div>
+
+  <div class="wheel-outer">
+    <div class="pointer-wrap">
+      <div class="ptr-arrow"></div>
+      <div class="ptr-stem"></div>
+    </div>
+    <canvas id="wheel-canvas" width="500" height="500"></canvas>
+  </div>
+
+  <button class="spin-btn" id="spin-btn" onclick="spin()">SPIN</button>
+
+  <div class="history-wrap" id="history-wrap" style="display:none">
+    <div class="history-label">This session</div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+</div>
+
+<!-- ─── DONE ─── -->
+<div id="screen-done" class="screen">
+  <div class="done-emoji">🎊</div>
+  <div class="done-title" id="done-title">All done!</div>
+  <div class="done-sub">Everything you won this month.</div>
+  <div class="done-card" id="done-list"></div>
+  <button class="btn-new" onclick="show('screen-login')">← Sign out / Next player</button>
+</div>
+
+<!-- ─── RESULT MODAL ─── -->
+<div id="modal-result">
+  <div class="modal-bg" onclick="closeResult()"></div>
+  <div class="modal-card">
+    <div class="m-icon-wrap"><span id="result-icon">🎁</span></div>
+    <div class="m-eyebrow">You won</div>
+    <div class="m-prize" id="result-prize"></div>
+    <div class="m-actions">
+      <button class="btn-ghost" onclick="closeResult()">Close</button>
+      <button class="btn-primary" id="btn-again" onclick="closeResult()" style="flex:1">Spin again</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── EVERYONE WINS ─── -->
+<div id="modal-everyone">
+  <div class="wordmark" style="position:absolute;top:24px">Closr.</div>
+  <div class="ew-eyebrow">The green slice</div>
+  <div class="ew-headline">EVERYONE<br>WINS!</div>
+  <div class="ew-spinner" id="ew-name">landed on it.</div>
+  <div class="ew-card">
+    <div class="ew-card-icon" id="ew-icon">🍦</div>
+    <div class="ew-card-text" id="ew-text">Ice cream for everyone</div>
+  </div>
+  <div class="ew-footer">Tell the team. This one's on the house.</div>
+  <button class="btn-primary-full" onclick="closeEveryone()">Continue →</button>
+</div>
+
+<!-- Confetti -->
+<canvas id="confetti-canvas"></canvas>
+
+<script>
+// ══════════════════════════════════════════════
+// PRIZES
+// ══════════════════════════════════════════════
+const PRIZES = [
+  { label: '₹500 Swiggy',      icon: '🍔', color: '#E84040', fg: '#fff' },
+  { label: '₹500 Amazon',      icon: '📦', color: '#3B82F6', fg: '#fff' },
+  { label: 'Team Activity',    icon: '🎯', color: '#8B5CF6', fg: '#fff' },
+  { label: 'Founder Chat',     icon: '☕', color: '#059669', fg: '#fff' },
+  { label: 'Everyone Wins!',   icon: '✨', color: '#13BE94', fg: '#000', special: true },
+  { label: 'Closr Merch',      icon: '👕', color: '#DB2777', fg: '#fff' },
+  { label: 'Work from Café',   icon: '💻', color: '#0891B2', fg: '#fff' },
+  { label: 'Learning Budget',  icon: '📚', color: '#D97706', fg: '#fff' },
+];
+
+const EW_PRIZES = [
+  { icon: '🍦', text: 'Ice cream for everyone' },
+  { icon: '☕', text: 'Coffee on the house'    },
+  { icon: '🍰', text: 'Dessert round'          },
+  { icon: '🛵', text: '₹200 Swiggy for all'   },
+];
+
+// ══════════════════════════════════════════════
+// WHEEL STATE
+// ══════════════════════════════════════════════
+let playerName     = '';
+let playerEmail    = '';
+let accessToken    = null;
+let tokensLeft     = 0;
+let playerRowIndex = -1; // 1-based row in Tokens tab (row 1 = header)
+let spinCount      = 0;
+let wins           = [];
+let isSpinning     = false;
+let currentAngle   = 0;
+
+// ══════════════════════════════════════════════
+// CANVAS
+// ══════════════════════════════════════════════
+const canvas = document.getElementById('wheel-canvas');
+const ctx    = canvas.getContext('2d');
+const N      = PRIZES.length;
+const SEG    = (2 * Math.PI) / N;
+const CX = 250, CY = 250, R = 242;
+
+function drawWheel(a) {
+  ctx.clearRect(0, 0, 500, 500);
+
+  // outer ring background
+  ctx.beginPath();
+  ctx.arc(CX, CY, R + 6, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0C1010';
+  ctx.fill();
+
+  // green border
+  ctx.beginPath();
+  ctx.arc(CX, CY, R + 5, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#13BE94';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  for (let i = 0; i < N; i++) {
+    const a0 = a + i * SEG;
+    const a1 = a0 + SEG;
+    const p  = PRIZES[i];
+
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, a0, a1);
+    ctx.closePath();
+    ctx.fillStyle = p.color;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, a0, a1);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(CX, CY);
+    ctx.rotate(a0 + SEG / 2);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+
+    ctx.font = '20px serif';
+    ctx.fillText(p.icon, R - 10, 0);
+
+    ctx.font = '600 13px DM Sans, system-ui, sans-serif';
+    ctx.fillStyle = p.fg;
+    ctx.fillText(p.label, R - 38, 0);
+
+    ctx.restore();
+  }
+
+  // center hub
+  ctx.beginPath();
+  ctx.arc(CX, CY, 40, 0, 2 * Math.PI);
+  ctx.fillStyle = '#070909';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(CX, CY, 40, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#13BE94';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.font = '400 14px "Instrument Serif", Georgia, serif';
+  ctx.fillStyle = '#13BE94';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Closr.', CX, CY);
+}
+
+function sizeCanvas() {
+  const s = Math.min(window.innerWidth - 32, 520);
+  canvas.style.width  = s + 'px';
+  canvas.style.height = s + 'px';
+}
+sizeCanvas();
+window.addEventListener('resize', sizeCanvas);
+drawWheel(0);
+
+// ══════════════════════════════════════════════
+// SPIN
+// ══════════════════════════════════════════════
+function spin() {
+  if (isSpinning || tokensLeft <= 0) return;
+  isSpinning = true;
+  _lastSeg = null;
+  document.getElementById('spin-btn').disabled = true;
+
+  const winIdx    = Math.floor(Math.random() * N);
+  const landAt    = -Math.PI / 2 - (winIdx * SEG + SEG / 2);
+  const extraLaps = 5 + Math.floor(Math.random() * 4);
+  const n         = Math.ceil((currentAngle - landAt) / (2 * Math.PI));
+  const target    = landAt + (n + extraLaps) * 2 * Math.PI;
+
+  const start = currentAngle;
+  const delta = target - start;
+  const dur   = 3600 + Math.random() * 800;
+  const t0    = performance.now();
+
+  const ease = t => 1 - Math.pow(1 - t, 4);
+
+  function frame(now) {
+    const t = Math.min((now - t0) / dur, 1);
+    currentAngle = start + delta * ease(t);
+    drawWheel(currentAngle);
+
+    // tick sound on each segment crossing
+    const seg = Math.floor((-Math.PI / 2 - currentAngle) / SEG);
+    if (_lastSeg !== null && seg !== _lastSeg) playTick();
+    _lastSeg = seg;
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      currentAngle = target;
+      isSpinning   = false;
+      onSpinEnd(winIdx);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function onSpinEnd(idx) {
+  const prize = PRIZES[idx];
+  tokensLeft--;
+  spinCount++;
+  wins.push(prize);
+  updatePill();
+  addHistory(prize, spinCount);
+  logResult(prize);
+  decrementTokenInSheet();
+  playWin();
+  prize.special ? triggerEW() : showResult(prize);
+}
+
+// ══════════════════════════════════════════════
+// RESULT MODAL
+// ══════════════════════════════════════════════
+function showResult(prize) {
+  document.getElementById('result-icon').textContent  = prize.icon;
+  document.getElementById('result-prize').textContent = prize.label;
+
+  const btn = document.getElementById('btn-again');
+  if (tokensLeft <= 0) {
+    btn.textContent = 'See your wins';
+    btn.onclick     = () => { closeResult(); setTimeout(showDone, 250); };
+  } else {
+    btn.textContent = `Spin again  (${tokensLeft} left)`;
+    btn.onclick     = closeResult;
+  }
+
+  document.getElementById('modal-result').classList.add('open');
+  launchConfetti(false);
+}
+
+function closeResult() {
+  document.getElementById('modal-result').classList.remove('open');
+  if (tokensLeft > 0) document.getElementById('spin-btn').disabled = false;
+}
+
+// ══════════════════════════════════════════════
+// EVERYONE WINS
+// ══════════════════════════════════════════════
+function triggerEW() {
+  const ew = EW_PRIZES[Math.floor(Math.random() * EW_PRIZES.length)];
+  document.getElementById('ew-name').textContent  = playerName + ' landed on it.';
+  document.getElementById('ew-icon').textContent  = ew.icon;
+  document.getElementById('ew-text').textContent  = ew.text;
+  document.getElementById('modal-everyone').classList.add('open');
+  launchConfetti(true);
+}
+
+function closeEveryone() {
+  document.getElementById('modal-everyone').classList.remove('open');
+  if (tokensLeft > 0) {
+    document.getElementById('spin-btn').disabled = false;
+  } else {
+    setTimeout(showDone, 250);
+  }
+}
+
+// ══════════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════════
+function addHistory(prize, num) {
+  document.getElementById('history-wrap').style.display = 'block';
+  const el = document.createElement('div');
+  el.className = 'h-item';
+  el.innerHTML = `<span class="h-icon">${prize.icon}</span><span class="h-prize">${prize.label}</span><span class="h-num">Spin #${num}</span>`;
+  document.getElementById('history-list').prepend(el);
+}
+
+// ══════════════════════════════════════════════
+// DONE
+// ══════════════════════════════════════════════
+function showDone() {
+  document.getElementById('done-title').textContent = playerName + ', all done!';
+  const list = document.getElementById('done-list');
+  list.innerHTML = '';
+  wins.forEach((w, i) => {
+    const el = document.createElement('div');
+    el.className = 'd-item';
+    el.innerHTML = `<span class="d-item-icon">${w.icon}</span><span class="d-item-name">${w.label}</span><span class="d-item-num">Spin ${i+1}</span>`;
+    list.appendChild(el);
+  });
+  show('screen-done');
+}
+
+// ══════════════════════════════════════════════
+// LOG RESULT TO SHEET (Results tab)
+// ══════════════════════════════════════════════
+async function logResult(prize) {
+  if (!accessToken || !CONFIG.SHEET_ID) return;
+  const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const row  = [[date, playerName, playerEmail, prize.label]];
+  try {
+    const ok = await appendToResults(row);
+    if (!ok) {
+      await createResultsTab();
+      await appendToResults(row);
+    }
+  } catch(e) {
+    console.warn('logResult failed:', e);
+  }
+}
+
+async function appendToResults(row) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent('Results!A:D')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const r = await fetch(url, {
+    method : 'POST',
+    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body   : JSON.stringify({ values: row }),
+  });
+  return r.ok;
+}
+
+async function createResultsTab() {
+  const base = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}`;
+  // Create the tab
+  await fetch(`${base}:batchUpdate`, {
+    method : 'POST',
+    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body   : JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Results' } } }] }),
+  });
+  // Add headers
+  await fetch(`${base}/values/${encodeURIComponent('Results!A1:D1')}?valueInputOption=USER_ENTERED`, {
+    method : 'PUT',
+    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body   : JSON.stringify({ values: [['Date', 'Name', 'Email', 'Prize']] }),
+  });
+}
+
+// ══════════════════════════════════════════════
+// DECREMENT TOKEN IN SHEET (Tokens tab Col C)
+// ══════════════════════════════════════════════
+async function decrementTokenInSheet() {
+  if (!accessToken || !CONFIG.SHEET_ID || playerRowIndex < 0) return;
+  const cell = encodeURIComponent(`${CONFIG.SHEET_TAB}!C${playerRowIndex}`);
+  try {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${cell}?valueInputOption=USER_ENTERED`,
+      {
+        method : 'PUT',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ values: [[tokensLeft]] }),
+      }
+    );
+  } catch(e) {
+    console.warn('decrementTokenInSheet failed:', e);
+  }
+}
+
+// ══════════════════════════════════════════════
+// LOAD WHEEL (called after auth)
+// ══════════════════════════════════════════════
+function loadWheel(name, tokens) {
+  playerName   = name;
+  tokensLeft   = tokens;
+  spinCount    = 0;
+  wins         = [];
+  currentAngle = 0;
+
+  document.getElementById('display-name').textContent = name;
+  document.getElementById('history-list').innerHTML   = '';
+  document.getElementById('history-wrap').style.display = 'none';
+  document.getElementById('spin-btn').disabled        = false;
+  updatePill();
+  show('screen-wheel');
+  sizeCanvas();
+  drawWheel(0);
+}
+
+function updatePill() {
+  const el = document.getElementById('display-tokens');
+  el.textContent  = tokensLeft === 1 ? '1 spin left' : tokensLeft + ' spins left';
+  el.style.opacity = tokensLeft === 0 ? '0.35' : '1';
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showStatus(icon, title, msg) {
+  document.getElementById('status-icon').textContent  = icon;
+  document.getElementById('status-title').textContent = title;
+  document.getElementById('status-msg').textContent   = msg;
+  show('screen-status');
+}
+
+// ══════════════════════════════════════════════
+// CONFETTI
+// ══════════════════════════════════════════════
+const cc   = document.getElementById('confetti-canvas');
+const cctx = cc.getContext('2d');
+let parts = [], animId = null;
+
+function launchConfetti(big) {
+  cc.width  = window.innerWidth;
+  cc.height = window.innerHeight;
+  const n = big ? 220 : 90;
+  const pal = ['#13BE94','#10A07A','#FF6B6B','#4ECDC4','#45B7D1','#FFEAA7','#DDA0DD','#fff'];
+  parts = Array.from({length:n}, () => ({
+    x: Math.random() * cc.width,
+    y: -10 - Math.random() * 120,
+    w: 5 + Math.random() * 8,
+    h: 8 + Math.random() * 7,
+    vx: (Math.random() - 0.5) * 5,
+    vy: 1.5 + Math.random() * 4,
+    rot: Math.random() * 360,
+    spin: (Math.random() - 0.5) * 9,
+    col: pal[Math.floor(Math.random() * pal.length)],
+    a: 1,
+  }));
+  if (animId) cancelAnimationFrame(animId);
+  animConf();
+}
+
+function animConf() {
+  cctx.clearRect(0, 0, cc.width, cc.height);
+  let alive = 0;
+  parts.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.07; p.rot += p.spin;
+    if (p.y > cc.height - 60) p.a -= 0.035;
+    if (p.a > 0) {
+      alive++;
+      cctx.save();
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.rot * Math.PI / 180);
+      cctx.globalAlpha = Math.max(0, p.a);
+      cctx.fillStyle   = p.col;
+      cctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      cctx.restore();
+    }
+  });
+  if (alive > 0) animId = requestAnimationFrame(animConf);
+  else cctx.clearRect(0, 0, cc.width, cc.height);
+}
+
+// ══════════════════════════════════════════════
+// SOUNDS (Web Audio — no library)
+// ══════════════════════════════════════════════
+let _ac = null;
+let _lastSeg = null;
+
+function _ctx() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  return _ac;
+}
+
+function playTick() {
+  try {
+    const c = _ctx();
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type = 'triangle';
+    o.frequency.value = 700 + Math.random() * 250;
+    g.gain.setValueAtTime(0.14, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.055);
+    o.start(); o.stop(c.currentTime + 0.055);
+  } catch(e) {}
+}
+
+function playWin() {
+  try {
+    const c = _ctx();
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type = 'sine';
+      o.frequency.value = freq;
+      const t = c.currentTime + i * 0.11;
+      g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+      o.start(t); o.stop(t + 0.32);
+    });
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+// GOOGLE AUTH
+// ══════════════════════════════════════════════
+let tokenClient = null;
+
+function initGIS() {
+  if (typeof google === 'undefined' || !google.accounts) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id : CONFIG.CLIENT_ID,
+    scope     : [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ].join(' '),
+    callback  : onToken,
+  });
+}
+
+function handleSignIn() {
+  // Show setup warning if not configured
+  if (CONFIG.CLIENT_ID === 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
+    document.getElementById('setup-warn').style.display = 'block';
+    return;
+  }
+  if (!tokenClient) {
+    if (typeof google === 'undefined') {
+      alert('Google Sign-In is still loading. Give it a second and try again.');
+      return;
+    }
+    initGIS();
+  }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+async function onToken(resp) {
+  if (resp.error) {
+    showStatus('⚠️', 'Sign-in failed', resp.error_description || resp.error);
+    return;
+  }
+
+  show('screen-loading');
+  document.getElementById('loading-text').textContent = 'Finding your tokens...';
+
+  try {
+    // 1. Get user profile
+    const profile = await gFetch('https://www.googleapis.com/oauth2/v3/userinfo', resp.access_token);
+    const email   = (profile.email || '').toLowerCase();
+
+    if (!email) throw new Error('Could not read your email address.');
+    accessToken = resp.access_token;
+    playerEmail = email;
+
+    document.getElementById('loading-text').textContent = 'Checking the sheet...';
+
+    // 2. Read Google Sheet
+    const range    = encodeURIComponent(`${CONFIG.SHEET_TAB}!A:C`);
+    const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}`;
+    const sheet    = await gFetch(sheetUrl, resp.access_token);
+
+    const rows     = (sheet.values || []).slice(1); // skip header
+    const rowIdx   = rows.findIndex(r => (r[0] || '').toLowerCase().trim() === email);
+    const match    = rowIdx >= 0 ? rows[rowIdx] : null;
+    playerRowIndex = rowIdx + 2; // +1 for 0-index, +1 for header row
+
+    if (!match) {
+      showStatus(
+        '🤷',
+        'You\'re not on the list',
+        `${profile.email} wasn't found in the sheet. Ask the admin to add you.`
+      );
+      return;
+    }
+
+    const name   = (match[1] || profile.given_name || profile.name || 'You').trim();
+    const tokens = parseInt(match[2], 10) || 0;
+
+    if (tokens <= 0) {
+      showStatus(
+        '😔',
+        `Hey ${name}`,
+        'You have 0 tokens this month. Come back when the next cycle closes.'
+      );
+      return;
+    }
+
+    loadWheel(name, tokens);
+
+  } catch (err) {
+    showStatus('⚠️', 'Something went wrong', err.message);
+  }
+}
+
+async function gFetch(url, token) {
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`API ${r.status}: ${txt.slice(0, 200)}`);
+  }
+  return r.json();
+}
+
+// Init GIS once the library loads (it's async)
+// Poll until available (max 10s)
+let gisWait = 0;
+const gisTimer = setInterval(() => {
+  if (typeof google !== 'undefined' && google.accounts) {
+    clearInterval(gisTimer);
+    if (CONFIG.CLIENT_ID !== 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
+      initGIS();
+    }
+  }
+  if (++gisWait > 100) clearInterval(gisTimer); // 10s timeout
+}, 100);
+</script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
