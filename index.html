@@ -4,14 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Closr Wheel Tokens</title>
-  <script src="https://accounts.google.com/gsi/client" async></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&family=Instrument+Serif&family=Cormorant+Garamond:wght@300&display=swap" rel="stylesheet">
 
   <script>
     const CONFIG = {
-      CLIENT_ID : '51775475371-q7ri44jp0hokr66e4f3nl7hmvcri5phn.apps.googleusercontent.com',
-      SHEET_ID  : '1W3fSo_wxC2qXvON2_rJcjJq-dBWh2J-gztPh3OC-fWI',
-      SHEET_TAB : 'Tokens',
+      SCRIPT_URL: 'YOUR_APPS_SCRIPT_URL', // paste deployed Apps Script URL here
     };
   </script>
 
@@ -77,24 +74,25 @@
     .login-card h1 { font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px; }
     .login-card p  { font-size: 14px; color: var(--muted); line-height: 1.55; margin-top: 10px; }
 
-    .google-btn {
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      background: #fff; color: #3c4043; border: none; border-radius: 12px;
-      padding: 13px 20px; font-family: inherit; font-size: 15px; font-weight: 600;
-      cursor: pointer; transition: box-shadow 0.15s, opacity 0.15s;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3); width: 100%;
+    .code-input-wrap { display: flex; gap: 8px; }
+    .code-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px 16px; color: var(--text);
+      font-family: inherit; font-size: 16px; font-weight: 600;
+      outline: none; transition: border-color 0.15s; letter-spacing: 1px;
     }
-    .google-btn:hover  { box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
-    .google-btn:active { opacity: 0.9; transform: scale(0.99); }
-    .google-btn svg    { flex-shrink: 0; }
-
-    .setup-warn {
+    .code-input:focus { border-color: var(--accent); }
+    .code-input::placeholder { color: var(--muted); font-weight: 400; letter-spacing: 0; }
+    .enter-btn {
+      background: var(--accent); color: #000; border: none; border-radius: 12px;
+      padding: 13px 20px; font-family: inherit; font-size: 15px; font-weight: 800;
+      cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
+    }
+    .enter-btn:hover { opacity: 0.88; }
+    .enter-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .login-error {
       background: rgba(255,80,80,0.1); border: 1px solid rgba(255,80,80,0.3);
       border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #ff9090; line-height: 1.5;
-    }
-    .setup-warn code {
-      background: rgba(255,255,255,0.1); border-radius: 4px; padding: 1px 5px;
-      font-family: monospace; font-size: 12px;
     }
 
     /* ── LOADING ── */
@@ -183,8 +181,17 @@
     .panel-prizes {
       width: 240px; min-width: 240px; flex-shrink: 0;
       border-right: 1px solid var(--border);
-      overflow-y: auto; padding: 16px 14px;
+      overflow: hidden; padding: 16px 14px;
       display: none; /* hidden on mobile */
+      position: relative;
+    }
+    .prize-scroll-track {
+      display: flex; flex-direction: column;
+      animation: prizeDrift 32s linear infinite;
+    }
+    @keyframes prizeDrift {
+      0%   { transform: translateY(-50%); }
+      100% { transform: translateY(0%); }
     }
 
     /* CENTER */
@@ -226,17 +233,17 @@
 
     /* Prize cards in left panel */
     .prize-card {
-      display: flex; gap: 9px; padding: 10px; border-radius: 11px;
+      display: flex; gap: 9px; padding: 11px; border-radius: 11px;
       background: var(--surface2); border: 1px solid var(--border);
-      margin-bottom: 7px;
+      margin-bottom: 7px; flex-shrink: 0;
     }
     .prize-card-icon {
-      width: 34px; height: 34px; border-radius: 8px;
+      width: 36px; height: 36px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 17px; flex-shrink: 0;
+      font-size: 18px; flex-shrink: 0;
     }
-    .prize-card-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
-    .prize-card-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+    .prize-card-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+    .prize-card-desc { font-size: 12px; color: rgba(255,255,255,0.75); line-height: 1.45; }
 
     /* ── TAB NAV ── */
     .tab-nav {
@@ -446,20 +453,13 @@
   <div class="login-card">
     <div>
       <h1>Monthly<br>Reward Wheel</h1>
-      <p>Sign in with your work Google account. Your tokens are waiting.</p>
+      <p>Enter your spin code to get started.</p>
     </div>
-    <button class="google-btn" onclick="handleSignIn()">
-      <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.3 0 24 0 14.7 0 6.7 5.4 2.7 13.3l7.8 6C12.3 13.2 17.7 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 2.9-2.2 5.4-4.6 7l7.3 5.7c4.3-4 6.8-9.8 6.8-16.7z"/>
-        <path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.7-4.6l-7.8-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.7 10.7l7.8-6.1z"/>
-        <path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.5-5.7l-7.3-5.7c-2.1 1.4-4.8 2.2-8.2 2.2-6.3 0-11.6-3.7-13.5-9l-7.8 6C6.7 42.6 14.7 48 24 48z"/>
-      </svg>
-      Sign in with Google
-    </button>
-    <div id="setup-warn" class="setup-warn" style="display:none">
-      <strong>Setup needed.</strong> Edit <code>CLIENT_ID</code> and <code>SHEET_ID</code> at the top of this file, then serve it over HTTP (not <code>file://</code>).
+    <div class="code-input-wrap">
+      <input type="text" id="code-input" class="code-input" placeholder="Your code" autocomplete="off" spellcheck="false" />
+      <button class="enter-btn" id="enter-btn" onclick="handleLogin()">Enter →</button>
     </div>
+    <div id="login-error" class="login-error" style="display:none"></div>
   </div>
 </div>
 
@@ -597,18 +597,18 @@
 <canvas id="confetti-canvas"></canvas>
 
 <script>
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // PRIZES (with redemption descriptions)
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 const PRIZES = [
   { label: '₹500 Swiggy',     icon: '🍔', color: '#E84040', fg: '#fff', desc: 'Voucher sent to your email within 2 business days.' },
   { label: '₹500 Amazon',     icon: '📦', color: '#3B82F6', fg: '#fff', desc: 'Gift card delivered to your inbox. Spend it on anything.' },
-  { label: 'Team Activity',   icon: '🎯', color: '#8B5CF6', fg: '#fff', desc: 'Plan an outing for the team. Budget ₹2,000. Co-ordinate with Sahil.' },
-  { label: 'Founder Chat',    icon: '☕', color: '#059669', fg: '#fff', desc: '30 mins over coffee with Sahil. Pick any open slot.' },
-  { label: 'Everyone Wins!',  icon: '✨', color: '#13BE94', fg: '#000', special: true, desc: 'A surprise treat for the whole team. Announce in Slack.' },
+  { label: 'Team Activity',   icon: '🎯', color: '#8B5CF6', fg: '#fff', desc: 'Plan an outing for the team. Budget ₹2,000. Co-ordinate with HR.' },
+  { label: 'Founder Chat',    icon: '☕', color: '#059669', fg: '#fff', desc: '30 mins over coffee with the founders. Pick any open slot.' },
+  { label: 'Everyone Wins!',  icon: '✨', color: '#13BE94', fg: '#fff', special: true, desc: 'A surprise treat for the whole team. Announce in Slack.' },
   { label: 'Closr Merch',     icon: '👕', color: '#DB2777', fg: '#fff', desc: 'Pick your size. We\'ll get it delivered to you.' },
   { label: 'Work from Café',  icon: '💻', color: '#0891B2', fg: '#fff', desc: 'Pick any café, work a full day on us. Expense up to ₹800.' },
-  { label: 'Learning Budget', icon: '📚', color: '#D97706', fg: '#fff', desc: '₹1,000 toward any course, book, or tool. Invoice Sahil.' },
+  { label: 'Learning Budget', icon: '📚', color: '#D97706', fg: '#fff', desc: '₹1,000 toward any course, book, or tool. Expense through HR.' },
 ];
 
 const EW_PRIZES = [
@@ -618,24 +618,22 @@ const EW_PRIZES = [
   { icon: '🛵', text: '₹200 Swiggy for all'   },
 ];
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // STATE
-// ══════════════════════════════════════════════
-let playerName     = '';
-let playerEmail    = '';
-let accessToken    = null;
-let tokensLeft     = 0;
-let playerRowIndex = -1;
-let spinCount      = 0;
+// ══════════════════════════════════════════════════
+let playerName  = '';
+let playerCode  = '';
+let tokensLeft  = 0;
+let spinCount   = 0;
 let wins           = [];
 let isSpinning     = false;
 let currentAngle   = 0;
 let allHistoryRows = [];
 let historyFetched = false;
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // CANVAS  (vars declared here; init called at end)
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 let canvas, ctx;
 const N   = PRIZES.length;
 const SEG = (2 * Math.PI) / N;
@@ -712,9 +710,9 @@ function sizeCanvas() {
   canvas.style.height = s + 'px';
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // SPIN
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function spin() {
   if (isSpinning || tokensLeft <= 0) return;
   isSpinning = true;
@@ -765,8 +763,7 @@ function onSpinEnd(idx) {
   wins.push(prize);
   updatePill();
   addSessionHistory(prize, spinCount);
-  logResult(prize);
-  decrementTokenInSheet();
+  recordSpin(prize);
   playWin();
 
   const ctx2 = document.getElementById('spin-context');
@@ -777,9 +774,9 @@ function onSpinEnd(idx) {
   prize.special ? triggerEW() : showResult(prize);
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // RESULT MODAL
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function showResult(prize) {
   document.getElementById('result-icon').textContent  = prize.icon;
   document.getElementById('result-prize').textContent = prize.label;
@@ -800,9 +797,9 @@ function closeResult() {
   if (tokensLeft > 0) document.getElementById('spin-btn').disabled = false;
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // EVERYONE WINS
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function triggerEW() {
   const ew = EW_PRIZES[Math.floor(Math.random() * EW_PRIZES.length)];
   document.getElementById('ew-name').textContent = playerName + ' landed on it.';
@@ -821,9 +818,9 @@ function closeEveryone() {
   }
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // SESSION HISTORY (right panel)
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function addSessionHistory(prize, num) {
   const tab = document.getElementById('tab-session');
 
@@ -842,24 +839,20 @@ function addSessionHistory(prize, num) {
   el.innerHTML = `<span class="h-icon">${prize.icon}</span><span class="h-prize">${prize.label}</span><span class="h-num">#${num}</span>`;
   list.insertBefore(el, list.firstChild);
 
+  // Switch to session tab on first spin
   if (num === 1) switchTab('session');
 }
 
-// ══════════════════════════════════════════════
-// LIFETIME HISTORY + LEADERBOARD (from Sheets)
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+// LIFETIME HISTORY + LEADERBOARD (from Script)
+// ══════════════════════════════════════════════════
 async function fetchAllHistory() {
-  if (!accessToken || !CONFIG.SHEET_ID) return;
   try {
-    const range = encodeURIComponent('Results!A:D');
-    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}`;
-    const data  = await gFetch(url, accessToken);
-    const rows  = (data.values || []).slice(1);
-    allHistoryRows = rows;
+    const data = await callScript('history', { code: playerCode });
+    allHistoryRows = data.allRows || [];
     historyFetched = true;
-    const myRows = rows.filter(r => (r[2] || '').toLowerCase().trim() === playerEmail);
-    renderLifetimeHistory(myRows);
-    renderLeaderboard(rows);
+    renderLifetimeHistory(data.myRows || []);
+    renderLeaderboard(allHistoryRows);
   } catch(e) {
     document.getElementById('tab-lifetime').innerHTML =
       '<div class="empty-state">No lifetime history yet.<br>Start spinning to build it.</div>';
@@ -883,7 +876,12 @@ function renderLifetimeHistory(rows) {
     const prizeObj = PRIZES.find(p => p.label === prize) || { icon: '🎁' };
     const item = document.createElement('div');
     item.className = 'lt-item';
-    item.innerHTML = `<span class="lt-icon">${prizeObj.icon}</span><div style="flex:1;min-width:0"><div class="lt-prize">${prize}</div><div class="lt-date">${date}</div></div>`;
+    item.innerHTML = `
+      <span class="lt-icon">${prizeObj.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div class="lt-prize">${prize}</div>
+        <div class="lt-date">${date}</div>
+      </div>`;
     list.appendChild(item);
   });
   el.appendChild(list);
@@ -891,9 +889,15 @@ function renderLifetimeHistory(rows) {
 
 function renderLeaderboard(rows) {
   const el = document.getElementById('tab-board');
-  if (!rows || rows.length === 0) { el.innerHTML = '<div class="empty-state">No data yet.</div>'; return; }
+  if (!rows || rows.length === 0) {
+    el.innerHTML = '<div class="empty-state">No data yet.</div>';
+    return;
+  }
   const counts = {};
-  rows.forEach(r => { const name = (r[1] || '').trim(); if (name) counts[name] = (counts[name] || 0) + 1; });
+  rows.forEach(r => {
+    const name = (r[1] || '').trim();
+    if (name) counts[name] = (counts[name] || 0) + 1;
+  });
   const sorted = Object.entries(counts).sort(([,a],[,b]) => b - a).slice(0, 8);
   const medals = ['🥇','🥈','🥉'];
   el.innerHTML = '<div class="panel-section-title">Most wins</div>';
@@ -902,15 +906,18 @@ function renderLeaderboard(rows) {
     const item = document.createElement('div');
     item.className = 'lb-item';
     if (name === playerName) item.classList.add('lb-me');
-    item.innerHTML = `<span class="lb-rank">${medals[i] || (i + 1)}</span><span class="lb-name">${name}</span><span class="lb-count">${count}</span>`;
+    item.innerHTML = `
+      <span class="lb-rank">${medals[i] || (i + 1)}</span>
+      <span class="lb-name">${name}</span>
+      <span class="lb-count">${count}</span>`;
     list.appendChild(item);
   });
   el.appendChild(list);
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // DONE SCREEN
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function showDone() {
   document.getElementById('done-title').textContent = playerName + ', all done!';
   const list = document.getElementById('done-list');
@@ -924,66 +931,50 @@ function showDone() {
   show('screen-done');
 }
 
-// ══════════════════════════════════════════════
-// LOG RESULT → Sheets Results tab
-// ══════════════════════════════════════════════
-async function logResult(prize) {
-  if (!accessToken || !CONFIG.SHEET_ID) return;
-  const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const row  = [[date, playerName, playerEmail, prize.label]];
+// ══════════════════════════════════════════════════
+// RECORD SPIN → Apps Script
+// ══════════════════════════════════════════════════
+async function recordSpin(prize) {
   try {
-    const ok = await appendToResults(row);
-    if (!ok) { await createResultsTab(); await appendToResults(row); }
+    await callScript('spin', { code: playerCode, prize: prize.label });
     if (historyFetched) {
-      allHistoryRows.push(row[0]);
-      const myRows = allHistoryRows.filter(r => (r[2] || '').toLowerCase().trim() === playerEmail);
-      renderLifetimeHistory(myRows);
+      const date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      allHistoryRows.push([date, playerName, playerCode, prize.label]);
+      renderLifetimeHistory(allHistoryRows.filter(r => (r[2] || '').trim().toLowerCase() === playerCode.toLowerCase()));
       renderLeaderboard(allHistoryRows);
     }
-  } catch(e) { console.warn('logResult failed:', e); }
+  } catch(e) { console.warn('recordSpin failed:', e); }
 }
 
-async function appendToResults(row) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent('Results!A:D')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  const r = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ values: row }) });
-  return r.ok;
-}
-
-async function createResultsTab() {
-  const base = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}`;
-  await fetch(`${base}:batchUpdate`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Results' } } }] }) });
-  await fetch(`${base}/values/${encodeURIComponent('Results!A1:D1')}?valueInputOption=USER_ENTERED`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [['Date', 'Name', 'Email', 'Prize']] }) });
-}
-
-// ══════════════════════════════════════════════
-// DECREMENT TOKEN
-// ══════════════════════════════════════════════
-async function decrementTokenInSheet() {
-  if (!accessToken || !CONFIG.SHEET_ID || playerRowIndex < 0) return;
-  const cell = encodeURIComponent(`${CONFIG.SHEET_TAB}!C${playerRowIndex}`);
-  try {
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${cell}?valueInputOption=USER_ENTERED`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[tokensLeft]] }) });
-  } catch(e) { console.warn('decrementTokenInSheet failed:', e); }
-}
-
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // LOAD WHEEL
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function loadWheel(name, tokens) {
-  playerName = name; tokensLeft = tokens; spinCount = 0; wins = []; currentAngle = 0;
-  allHistoryRows = []; historyFetched = false;
-  document.getElementById('display-name').textContent = name;
-  document.getElementById('spin-btn').disabled = false;
-  document.getElementById('spin-context').textContent = `Ready, ${name.split(' ')[0]}. Good luck.`;
+  playerName   = name;
+  tokensLeft   = tokens;
+  spinCount    = 0;
+  wins         = [];
+  currentAngle = 0;
+  allHistoryRows = [];
+  historyFetched = false;
+
+  document.getElementById('display-name').textContent   = name;
+  document.getElementById('spin-btn').disabled          = false;
+  document.getElementById('spin-context').textContent   = `Ready, ${name.split(' ')[0]}. Good luck.`;
+
+  // Reset tabs
   document.getElementById('tab-session').innerHTML  = '<div class="empty-state">Your wins will<br>appear here.</div>';
   document.getElementById('tab-lifetime').innerHTML = '<div class="tab-loading"><div class="mini-spin"></div>Loading...</div>';
   document.getElementById('tab-board').innerHTML    = '<div class="tab-loading"><div class="mini-spin"></div>Loading...</div>';
   switchTab('session');
+
   updatePill();
   renderPrizeSidebar();
   show('screen-wheel');
   sizeCanvas();
   drawWheel(0);
+
+  // Fetch lifetime history in background
   fetchAllHistory();
 }
 
@@ -994,14 +985,15 @@ function updatePill() {
 }
 
 function signOut() {
-  playerName = ''; playerEmail = ''; accessToken = null;
+  playerName = ''; playerCode = '';
   tokensLeft = 0; spinCount = 0; wins = [];
+  document.getElementById('code-input').value = '';
   show('screen-login');
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // UI UTILS
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -1022,17 +1014,30 @@ function switchTab(name) {
 function renderPrizeSidebar() {
   const container = document.getElementById('prize-list');
   container.innerHTML = '';
-  PRIZES.forEach(p => {
-    const el = document.createElement('div');
-    el.className = 'prize-card';
-    el.innerHTML = `<div class="prize-card-icon" style="background:${p.color}22;border:1px solid ${p.color}44"><span>${p.icon}</span></div><div><div class="prize-card-name">${p.label}</div><div class="prize-card-desc">${p.desc}</div></div>`;
-    container.appendChild(el);
-  });
+  const track = document.createElement('div');
+  track.className = 'prize-scroll-track';
+  // Render twice for seamless infinite loop
+  for (let pass = 0; pass < 2; pass++) {
+    PRIZES.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'prize-card';
+      el.innerHTML = `
+        <div class="prize-card-icon" style="background:${p.color}22;border:1px solid ${p.color}44">
+          <span>${p.icon}</span>
+        </div>
+        <div>
+          <div class="prize-card-name">${p.label}</div>
+          <div class="prize-card-desc">${p.desc}</div>
+        </div>`;
+      track.appendChild(el);
+    });
+  }
+  container.appendChild(track);
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // CONFETTI  (vars declared here; init called at end)
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 let cc, cctx;
 let parts = [], animId = null;
 
@@ -1059,18 +1064,22 @@ function animConf() {
     if (p.y > cc.height - 60) p.a -= 0.035;
     if (p.a > 0) {
       alive++;
-      cctx.save(); cctx.translate(p.x, p.y); cctx.rotate(p.rot * Math.PI / 180);
-      cctx.globalAlpha = Math.max(0, p.a); cctx.fillStyle = p.col;
-      cctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); cctx.restore();
+      cctx.save();
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.rot * Math.PI / 180);
+      cctx.globalAlpha = Math.max(0, p.a);
+      cctx.fillStyle = p.col;
+      cctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      cctx.restore();
     }
   });
   if (alive > 0) animId = requestAnimationFrame(animConf);
   else cctx.clearRect(0, 0, cc.width, cc.height);
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // SOUNDS — realistic mechanical ratchet
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 let _ac = null;
 let _lastSeg = null;
 
@@ -1080,95 +1089,155 @@ function _ctx() {
   return _ac;
 }
 
+// Tick: shaped noise burst — sounds like a real peg hitting a strip
 function playTick(speedNorm = 0.5) {
+  // speedNorm: 1 = fast (start), 0 = slow (end)
   try {
-    const c = _ctx(), now = c.currentTime;
-    const bufLen = Math.floor(c.sampleRate * 0.020);
-    const buffer = c.createBuffer(1, bufLen, c.sampleRate);
-    const data   = buffer.getChannelData(0);
-    for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-14 * i / bufLen);
-    const source = c.createBufferSource(); source.buffer = buffer;
-    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 600 + speedNorm * 800;
-    const peak = c.createBiquadFilter(); peak.type = 'peaking'; peak.frequency.value = 1800 + speedNorm * 1200; peak.gain.value = 5; peak.Q.value = 1.5;
-    const gain = c.createGain(); gain.gain.value = 0.38 - speedNorm * 0.14;
-    source.connect(hp); hp.connect(peak); peak.connect(gain); gain.connect(c.destination);
+    const c   = _ctx();
+    const now = c.currentTime;
+
+    // Create a 20ms noise buffer with exponential decay envelope
+    const duration = 0.020;
+    const bufLen   = Math.floor(c.sampleRate * duration);
+    const buffer   = c.createBuffer(1, bufLen, c.sampleRate);
+    const data     = buffer.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) {
+      // Very fast attack, exponential decay (sounds like a click)
+      const env = Math.exp(-14 * i / bufLen);
+      data[i] = (Math.random() * 2 - 1) * env;
+    }
+
+    const source = c.createBufferSource();
+    source.buffer = buffer;
+
+    // High-pass filter removes mud — keeps the crisp click character
+    const hp = c.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 600 + speedNorm * 800; // brighter when fast
+
+    // Subtle resonant peak for "wooden/plastic" character
+    const peak = c.createBiquadFilter();
+    peak.type = 'peaking';
+    peak.frequency.value = 1800 + speedNorm * 1200;
+    peak.gain.value = 5;
+    peak.Q.value = 1.5;
+
+    const gain = c.createGain();
+    // Slow ticks are slightly louder = more suspenseful
+    gain.gain.value = 0.38 - speedNorm * 0.14;
+
+    source.connect(hp);
+    hp.connect(peak);
+    peak.connect(gain);
+    gain.connect(c.destination);
     source.start(now);
   } catch(e) {}
 }
 
+// Win: ascending jackpot arpeggio + triumphant chord
 function playWin() {
   try {
-    const c = _ctx(), now = c.currentTime;
+    const c   = _ctx();
+    const now = c.currentTime;
+
+    // Phase 1: Rising arpeggio
     const arpNotes = [392, 494, 587, 740, 988, 1175, 1480];
     arpNotes.forEach((freq, i) => {
-      const o = c.createOscillator(), g = c.createGain();
-      o.type = 'sine'; o.frequency.value = freq;
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
       const t = now + i * 0.062;
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.15, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
-      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.28);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.15, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + 0.28);
     });
+
+    // Phase 2: Final triumphant chord
     const chordT = now + arpNotes.length * 0.062 + 0.04;
     [740, 988, 1175, 1480].forEach((freq, i) => {
-      const o = c.createOscillator(), g = c.createGain();
-      o.type = i === 0 ? 'triangle' : 'sine'; o.frequency.value = freq;
-      g.gain.setValueAtTime(0, chordT); g.gain.linearRampToValueAtTime(0.12, chordT + 0.012); g.gain.exponentialRampToValueAtTime(0.001, chordT + 0.9);
-      o.connect(g); g.connect(c.destination); o.start(chordT); o.stop(chordT + 1.0);
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = i === 0 ? 'triangle' : 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0, chordT);
+      g.gain.linearRampToValueAtTime(0.12, chordT + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.001, chordT + 0.9);
+      o.connect(g); g.connect(c.destination);
+      o.start(chordT); o.stop(chordT + 1.0);
     });
   } catch(e) {}
 }
 
-// ══════════════════════════════════════════════
-// GOOGLE AUTH
-// ══════════════════════════════════════════════
-let tokenClient = null;
-
-function initGIS() {
-  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return;
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id : CONFIG.CLIENT_ID,
-    scope     : [
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/userinfo.email',
-      'https://www.googleapis.com/auth/userinfo.profile',
-    ].join(' '),
-    callback  : onToken,
-  });
+// ══════════════════════════════════════════════════
+// APPS SCRIPT BRIDGE
+// ══════════════════════════════════════════════════
+async function callScript(action, params = {}) {
+  if (!CONFIG.SCRIPT_URL || CONFIG.SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL') {
+    throw new Error('SCRIPT_URL not configured in CONFIG.');
+  }
+  const url = new URL(CONFIG.SCRIPT_URL);
+  url.searchParams.set('action', action);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const r = await fetch(url.toString(), { redirect: 'follow' });
+  if (!r.ok) throw new Error('Server error: ' + r.status);
+  const data = await r.json();
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
-function handleSignIn() {
-  if (CONFIG.CLIENT_ID === 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
-    document.getElementById('setup-warn').style.display = 'block';
-    return;
-  }
-  if (!tokenClient) {
-    if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-      alert('Google Sign-In is still loading. Give it a second and try again.');
-      return;
-    }
-    initGIS();
-  }
-  if (!tokenClient) {
-    alert('Could not initialise Google Sign-In. Please refresh the page and try again.');
-    return;
-  }
+// ══════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════
+async function handleLogin() {
+  const input = document.getElementById('code-input');
+  const code  = input.value.trim();
+  if (!code) { input.focus(); return; }
+
+  const btn = document.getElementById('enter-btn');
+  const err = document.getElementById('login-error');
+  btn.disabled    = true;
+  btn.textContent = '...';
+  err.style.display = 'none';
+
+  show('screen-loading');
+  document.getElementById('loading-text').textContent = 'Checking your code...';
+
   try {
-    tokenClient.requestAccessToken({ prompt: 'consent' });
+    const data = await callScript('login', { code });
+    playerCode = code;
+    loadWheel(data.name, data.tokens);
   } catch(e) {
-    alert('Sign-in failed to open. Please refresh and try again.\n\n' + e.message);
+    show('screen-login');
+    err.style.display = 'block';
+    err.textContent = e.message === 'Code not found'
+      ? "That code doesn't match anyone on the list. Check with Sahil."
+      : 'Something went wrong. Try again.';
+    btn.disabled    = false;
+    btn.textContent = 'Enter →';
   }
 }
 
 async function onToken(resp) {
-  if (resp.error) { showStatus('⚠️', 'Sign-in failed', resp.error_description || resp.error); return; }
+  if (resp.error) {
+    showStatus('⚠️', 'Sign-in failed', resp.error_description || resp.error);
+    return;
+  }
+
   show('screen-loading');
   document.getElementById('loading-text').textContent = 'Finding your tokens...';
+
   try {
     const profile = await gFetch('https://www.googleapis.com/oauth2/v3/userinfo', resp.access_token);
     const email   = (profile.email || '').toLowerCase();
     if (!email) throw new Error('Could not read your email address.');
     accessToken = resp.access_token;
     playerEmail = email;
+
     document.getElementById('loading-text').textContent = 'Checking the sheet...';
+
     const range    = encodeURIComponent(`${CONFIG.SHEET_TAB}!A:C`);
     const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}`;
     const sheet    = await gFetch(sheetUrl, resp.access_token);
@@ -1176,49 +1245,45 @@ async function onToken(resp) {
     const rowIdx   = rows.findIndex(r => (r[0] || '').toLowerCase().trim() === email);
     const match    = rowIdx >= 0 ? rows[rowIdx] : null;
     playerRowIndex = rowIdx + 2;
-    if (!match) { showStatus('🤷', 'You\'re not on the list', `${profile.email} wasn't found in the sheet. Ask the admin to add you.`); return; }
+
+    if (!match) {
+      showStatus('🤷', 'You\'re not on the list',
+        `${profile.email} wasn't found in the sheet. Ask the admin to add you.`);
+      return;
+    }
+
     const name   = (match[1] || profile.given_name || profile.name || 'You').trim();
     const tokens = parseInt(match[2], 10) || 0;
-    if (tokens <= 0) { showStatus('😔', `Hey ${name}`, 'You have 0 tokens this month. Come back when the next cycle closes.'); return; }
+
+    if (tokens <= 0) {
+      showStatus('😔', `Hey ${name}`,
+        'You have 0 tokens this month. Come back when the next cycle closes.');
+      return;
+    }
+
     loadWheel(name, tokens);
-  } catch (err) { showStatus('⚠️', 'Something went wrong', err.message); }
+
+  } catch (err) {
+    showStatus('⚠️', 'Something went wrong', err.message);
+  }
 }
 
 async function gFetch(url, token) {
   const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-  if (!r.ok) { const txt = await r.text(); throw new Error(`API ${r.status}: ${txt.slice(0, 200)}`); }
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`API ${r.status}: ${txt.slice(0, 200)}`);
+  }
   return r.json();
 }
 
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // PAGE INIT — runs last, after all function defs
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function pageInit() {
   try {
     canvas = document.getElementById('wheel-canvas');
     if (canvas) {
       ctx = canvas.getContext('2d');
       sizeCanvas();
-      window.addEventListener('resize', sizeCanvas);
-      drawWheel(0);
-    }
-  } catch(e) { console.warn('Canvas init failed:', e); }
-  try {
-    cc   = document.getElementById('confetti-canvas');
-    cctx = cc ? cc.getContext('2d') : null;
-  } catch(e) { console.warn('Confetti init failed:', e); }
-}
-pageInit();
-
-// Poll for GIS library (loaded async)
-let gisWait = 0;
-const gisTimer = setInterval(() => {
-  if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
-    clearInterval(gisTimer);
-    if (CONFIG.CLIENT_ID !== 'YOUR_CLIENT_ID.apps.googleusercontent.com') initGIS();
-  }
-  if (++gisWait > 100) clearInterval(gisTimer);
-}, 100);
-</script>
-</body>
-</html>
+  
