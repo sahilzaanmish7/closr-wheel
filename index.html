@@ -8,7 +8,7 @@
 
   <script>
     const CONFIG = {
-      SCRIPT_URL: 'YOUR_APPS_SCRIPT_URL', // paste deployed Apps Script URL here
+      SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwqnR17jM4L8kslDJikdzCYvyN3WxIDJPu6amKoFVXjwE4qhVmD8IO_RARLQfrxysyeag/exec',
     };
   </script>
 
@@ -597,9 +597,9 @@
 <canvas id="confetti-canvas"></canvas>
 
 <script>
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // PRIZES (with redemption descriptions)
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 const PRIZES = [
   { label: '₹500 Swiggy',     icon: '🍔', color: '#E84040', fg: '#fff', desc: 'Voucher sent to your email within 2 business days.' },
   { label: '₹500 Amazon',     icon: '📦', color: '#3B82F6', fg: '#fff', desc: 'Gift card delivered to your inbox. Spend it on anything.' },
@@ -618,9 +618,9 @@ const EW_PRIZES = [
   { icon: '🛵', text: '₹200 Swiggy for all'   },
 ];
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // STATE
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 let playerName  = '';
 let playerCode  = '';
 let tokensLeft  = 0;
@@ -631,9 +631,9 @@ let currentAngle   = 0;
 let allHistoryRows = [];
 let historyFetched = false;
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // CANVAS  (vars declared here; init called at end)
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 let canvas, ctx;
 const N   = PRIZES.length;
 const SEG = (2 * Math.PI) / N;
@@ -710,9 +710,9 @@ function sizeCanvas() {
   canvas.style.height = s + 'px';
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // SPIN
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 function spin() {
   if (isSpinning || tokensLeft <= 0) return;
   isSpinning = true;
@@ -739,7 +739,6 @@ function spin() {
 
     const seg = Math.floor((-Math.PI / 2 - currentAngle) / SEG);
     if (_lastSeg !== null && seg !== _lastSeg) {
-      // Speed: 1 = fast (start), 0 = slow (end)
       const speedNorm = Math.pow(1 - t, 3);
       playTick(speedNorm);
     }
@@ -774,9 +773,9 @@ function onSpinEnd(idx) {
   prize.special ? triggerEW() : showResult(prize);
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // RESULT MODAL
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 function showResult(prize) {
   document.getElementById('result-icon').textContent  = prize.icon;
   document.getElementById('result-prize').textContent = prize.label;
@@ -797,9 +796,9 @@ function closeResult() {
   if (tokensLeft > 0) document.getElementById('spin-btn').disabled = false;
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // EVERYONE WINS
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 function triggerEW() {
   const ew = EW_PRIZES[Math.floor(Math.random() * EW_PRIZES.length)];
   document.getElementById('ew-name').textContent = playerName + ' landed on it.';
@@ -818,9 +817,9 @@ function closeEveryone() {
   }
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // SESSION HISTORY (right panel)
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 function addSessionHistory(prize, num) {
   const tab = document.getElementById('tab-session');
 
@@ -843,9 +842,9 @@ function addSessionHistory(prize, num) {
   if (num === 1) switchTab('session');
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // LIFETIME HISTORY + LEADERBOARD (from Script)
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 async function fetchAllHistory() {
   try {
     const data = await callScript('history', { code: playerCode });
@@ -915,9 +914,9 @@ function renderLeaderboard(rows) {
   el.appendChild(list);
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // DONE SCREEN
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 function showDone() {
   document.getElementById('done-title').textContent = playerName + ', all done!';
   const list = document.getElementById('done-list');
@@ -931,9 +930,9 @@ function showDone() {
   show('screen-done');
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // RECORD SPIN → Apps Script
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 async function recordSpin(prize) {
   try {
     await callScript('spin', { code: playerCode, prize: prize.label });
@@ -946,9 +945,9 @@ async function recordSpin(prize) {
   } catch(e) { console.warn('recordSpin failed:', e); }
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // LOAD WHEEL
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 function loadWheel(name, tokens) {
   playerName   = name;
   tokensLeft   = tokens;
@@ -991,9 +990,9 @@ function signOut() {
   show('screen-login');
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // UI UTILS
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -1035,9 +1034,9 @@ function renderPrizeSidebar() {
   container.appendChild(track);
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // CONFETTI  (vars declared here; init called at end)
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 let cc, cctx;
 let parts = [], animId = null;
 
@@ -1077,9 +1076,9 @@ function animConf() {
   else cctx.clearRect(0, 0, cc.width, cc.height);
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // SOUNDS — realistic mechanical ratchet
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 let _ac = null;
 let _lastSeg = null;
 
@@ -1171,9 +1170,9 @@ function playWin() {
   } catch(e) {}
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // APPS SCRIPT BRIDGE
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 async function callScript(action, params = {}) {
   if (!CONFIG.SCRIPT_URL || CONFIG.SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL') {
     throw new Error('SCRIPT_URL not configured in CONFIG.');
@@ -1188,9 +1187,9 @@ async function callScript(action, params = {}) {
   return data;
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // LOGIN
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 async function handleLogin() {
   const input = document.getElementById('code-input');
   const code  = input.value.trim();
@@ -1277,13 +1276,39 @@ async function gFetch(url, token) {
   return r.json();
 }
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 // PAGE INIT — runs last, after all function defs
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════
 function pageInit() {
   try {
     canvas = document.getElementById('wheel-canvas');
     if (canvas) {
       ctx = canvas.getContext('2d');
       sizeCanvas();
-  
+      drawWheel(0);
+    }
+    window.addEventListener('resize', () => { sizeCanvas(); drawWheel(currentAngle); });
+    renderPrizeSidebar();
+
+    // Dark background fill
+    const bc = document.getElementById('bg-canvas');
+    if (bc) {
+      function fillBg() {
+        bc.width  = window.innerWidth;
+        bc.height = window.innerHeight;
+        const bctx = bc.getContext('2d');
+        bctx.fillStyle = '#070909';
+        bctx.fillRect(0, 0, bc.width, bc.height);
+      }
+      fillBg();
+      window.addEventListener('resize', fillBg);
+    }
+  } catch(e) {
+    console.error('pageInit error:', e);
+  }
+}
+
+pageInit();
+</script>
+</body>
+</html>
