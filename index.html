@@ -1088,34 +1088,25 @@ function playTick(speedNorm = 0.5) {
   try {
     const c   = _ctx();
     const now = c.currentTime;
-    const duration = 0.020;
-    const bufLen   = Math.floor(c.sampleRate * duration);
-    const buffer   = c.createBuffer(1, bufLen, c.sampleRate);
-    const data     = buffer.getChannelData(0);
-    for (let i = 0; i < bufLen; i++) {
-      const env = Math.exp(-14 * i / bufLen);
-      data[i] = (Math.random() * 2 - 1) * env;
-    }
-    const source = c.createBufferSource();
-    source.buffer = buffer;
-    const hp = c.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 600 + speedNorm * 800;
-    const peak = c.createBiquadFilter();
-    peak.type = 'peaking';
-    peak.frequency.value = 1800 + speedNorm * 1200;
-    peak.gain.value = 5;
-    peak.Q.value = 1.5;
+    const freq = 180 + speedNorm * 120;
+    const dur  = 0.055 - speedNorm * 0.02;
+    const osc  = c.createOscillator();
     const gain = c.createGain();
-    gain.gain.value = 0.38 - speedNorm * 0.14;
-    source.connect(hp);
-    hp.connect(peak);
-    peak.connect(gain);
+    const lp   = c.createBiquadFilter();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    lp.type = 'lowpass';
+    lp.frequency.value = 400;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.18, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.connect(lp);
+    lp.connect(gain);
     gain.connect(c.destination);
-    source.start(now);
+    osc.start(now);
+    osc.stop(now + dur + 0.01);
   } catch(e) {}
 }
-
 function playWin() {
   try {
     const c   = _ctx();
