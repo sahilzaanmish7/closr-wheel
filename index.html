@@ -375,6 +375,19 @@
       position: relative; width: 100%; height: 160px;
       border-radius: 18px; overflow: hidden; margin: 8px 0;
     }
+    .team-pick-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;
+    }
+    .team-pick-option {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 10px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      font-family: inherit; color: var(--text);
+    }
+    .team-pick-option:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .tp-icon { font-size: 26px; line-height: 1; }
+    .tp-text { font-size: 13px; font-weight: 600; text-align: center; }
     .scratch-foil {
       position: absolute; inset: 0; z-index: 2;
       background: linear-gradient(135deg, #D4AF37 0%, #F5E17A 30%, #B8960C 55%, #F0D060 75%, #C9980A 100%);
@@ -398,6 +411,11 @@
     .scratch-reveal-desc { font-size: 11px; color: var(--muted); text-align: center; padding: 0 16px; }
 
     /* ── PET MODAL ── */
+    #modal-team-pick {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    #modal-team-pick.open { display: flex; }
     #modal-pet {
       position: fixed; inset: 0; z-index: 100;
       align-items: flex-end; justify-content: center;
@@ -633,9 +651,7 @@
     <div class="m-eyebrow" id="sc-header">Team Activity</div>
     <div class="scratch-sub" id="sc-sub">Scratch to reveal your team outing</div>
     <div class="scratch-area">
-      <div class="scratch-foil" id="sc-foil" onclick="doScratch()">
-        <span class="scratch-foil-text">Scratch here ✦</span>
-      </div>
+      <canvas id="sc-canvas" style="position:absolute;inset:0;width:100%;height:100%;border-radius:18px;cursor:crosshair;touch-action:none;z-index:2"></canvas>
       <div class="scratch-reveal" id="sc-reveal">
         <div class="scratch-reveal-icon" id="sc-reveal-icon">🎲</div>
         <div class="scratch-reveal-text" id="sc-reveal-text">Escape Room</div>
@@ -645,6 +661,17 @@
     <div class="m-actions" id="sc-actions" style="display:none">
       <button class="btn-primary" onclick="closeScratch()" style="flex:1">Let's go! 🎉</button>
     </div>
+  </div>
+</div>
+
+<!-- ─── TEAM PICK MODAL ─── -->
+<div id="modal-team-pick">
+  <div class="modal-bg"></div>
+  <div class="modal-card">
+    <div class="m-eyebrow">Team Activity 🎯</div>
+    <div class="modal-title" style="font-size:20px;margin-top:4px">Pick your outing</div>
+    <div class="modal-sub" style="color:var(--muted);font-size:13px;margin-bottom:18px">Nearest to you — HR will sort the rest.</div>
+    <div class="team-pick-grid" id="team-pick-grid"></div>
   </div>
 </div>
 
@@ -931,7 +958,10 @@ function onSpinEnd(idx) {
   if (prize.pet) { showPetModal(prize); return; }
 
   commitSpin(prize);
-  prize.scratch ? showScratchCard(prize) : prize.special ? triggerEW() : showResult(prize);
+  if (prize.scratch === 'team') { showTeamPick(prize); }
+  else if (prize.scratch)       { showScratchCard(prize); }
+  else if (prize.special)       { triggerEW(); }
+  else                          { showResult(prize); }
 }
 
 function commitSpin(prize) {
@@ -992,24 +1022,104 @@ function showJoke(prize) {
 // SCRATCH CARD
 // ══════════════════════════════════════════════
 let _scratchPrize = null;
+function showTeamPick(prize) {
+  _scratchPrize = prize;
+  const grid = document.getElementById('team-pick-grid');
+  grid.innerHTML = '';
+  TEAM_SCRATCHES.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'team-pick-option';
+    btn.innerHTML = '<span class="tp-icon">' + item.icon + '</span><span class="tp-text">' + item.text + '</span>';
+    btn.onclick = () => pickTeamActivity(item);
+    grid.appendChild(btn);
+  });
+  document.getElementById('modal-team-pick').classList.add('open');
+}
+
+function pickTeamActivity(item) {
+  document.getElementById('modal-team-pick').classList.remove('open');
+  const prize = Object.assign({}, _scratchPrize, {
+    teaser: item.text,
+    desc: item.icon + '  ' + item.text + ' — nearest to you. HR will coordinate. Enjoy!'
+  });
+  showResult(prize);
+}
+
 function showScratchCard(prize) {
   _scratchPrize = prize;
-  const pool  = prize.scratch === 'team' ? TEAM_SCRATCHES : SKILL_SCRATCHES;
-  const pick  = pool[Math.floor(Math.random() * pool.length)];
+  const pick = SKILL_SCRATCHES[Math.floor(Math.random() * SKILL_SCRATCHES.length)];
   document.getElementById('sc-header').textContent  = prize.label;
-  document.getElementById('sc-sub').textContent     = prize.scratch === 'team'
-    ? 'Scratch to reveal your team outing'
-    : 'Scratch to reveal your skill class';
+  document.getElementById('sc-sub').textContent     = 'Scratch to reveal your skill class';
   document.getElementById('sc-reveal-icon').textContent = pick.icon;
   document.getElementById('sc-reveal-text').textContent = pick.text;
   document.getElementById('sc-result-desc').textContent = prize.desc;
-  // Reset foil
-  const foil = document.getElementById('sc-foil');
-  foil.style.opacity = '1';
-  foil.style.pointerEvents = 'auto';
-  document.getElementById('sc-reveal').style.opacity = '0';
+  document.getElementById('sc-reveal').style.opacity = '1';
   document.getElementById('sc-actions').style.display = 'none';
   document.getElementById('modal-scratch').classList.add('open');
+  requestAnimationFrame(() => initScratchCanvas());
+}
+
+function initScratchCanvas() {
+  const canvas = document.getElementById('sc-canvas');
+  if (!canvas) return;
+  const area   = canvas.parentElement;
+  canvas.width  = area.offsetWidth  || 280;
+  canvas.height = area.offsetHeight || 160;
+  const ctx = canvas.getContext('2d');
+
+  // Draw gold foil
+  const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  g.addColorStop(0,   '#D4AF37');
+  g.addColorStop(0.3, '#F5E17A');
+  g.addColorStop(0.6, '#B8960C');
+  g.addColorStop(1,   '#F0D060');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(80,50,0,0.35)';
+  ctx.font = 'bold 15px "DM Sans", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✦  Scratch here  ✦', canvas.width / 2, canvas.height / 2);
+
+  let painting = false;
+  let revealed  = false;
+
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * (canvas.width / r.width),
+             y: (src.clientY - r.top)  * (canvas.height / r.height) };
+  }
+
+  function scratchAt(e) {
+    if (!painting) return;
+    e.preventDefault();
+    const {x, y} = pos(e);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, 28, 0, Math.PI * 2);
+    ctx.fill();
+    if (!revealed) {
+      const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let t = 0;
+      for (let i = 3; i < d.length; i += 4) if (d[i] < 128) t++;
+      if (t / (canvas.width * canvas.height) > 0.45) {
+        revealed = true;
+        canvas.style.transition = 'opacity 0.4s';
+        canvas.style.opacity = '0';
+        setTimeout(() => { canvas.style.pointerEvents = 'none'; }, 420);
+        document.getElementById('sc-actions').style.display = 'flex';
+      }
+    }
+  }
+
+  canvas.onmousedown  = () => painting = true;
+  canvas.onmousemove  = scratchAt;
+  canvas.onmouseup    = () => painting = false;
+  canvas.onmouseleave = () => painting = false;
+  canvas.ontouchstart = e => { painting = true; e.preventDefault(); };
+  canvas.ontouchmove  = scratchAt;
+  canvas.ontouchend   = () => painting = false;
 }
 
 function doScratch() {
