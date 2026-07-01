@@ -958,10 +958,9 @@ function onSpinEnd(idx) {
   if (prize.pet) { showPetModal(prize); return; }
 
   commitSpin(prize);
-  if (prize.scratch === 'team') { showTeamPick(prize); }
-  else if (prize.scratch)       { showScratchCard(prize); }
-  else if (prize.special)       { triggerEW(); }
-  else                          { showResult(prize); }
+  if (prize.scratch)      { showScratchCard(prize); }
+  else if (prize.special) { triggerEW(); }
+  else                    { showResult(prize); }
 }
 
 function commitSpin(prize) {
@@ -1047,9 +1046,12 @@ function pickTeamActivity(item) {
 
 function showScratchCard(prize) {
   _scratchPrize = prize;
-  const pick = SKILL_SCRATCHES[Math.floor(Math.random() * SKILL_SCRATCHES.length)];
+  const pool = prize.scratch === 'team' ? TEAM_SCRATCHES : SKILL_SCRATCHES;
+  const pick = pool[Math.floor(Math.random() * pool.length)];
   document.getElementById('sc-header').textContent  = prize.label;
-  document.getElementById('sc-sub').textContent     = 'Scratch to reveal your skill class';
+  document.getElementById('sc-sub').textContent     = prize.scratch === 'team'
+    ? 'Scratch to reveal your team outing 🎯'
+    : 'Scratch to reveal your skill class 🎨';
   document.getElementById('sc-reveal-icon').textContent = pick.icon;
   document.getElementById('sc-reveal-text').textContent = pick.text;
   document.getElementById('sc-result-desc').textContent = prize.desc;
