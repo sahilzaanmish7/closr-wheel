@@ -741,7 +741,7 @@ const PRIZES = [
   { label: 'Double Salary', icon: '💸', color: '#6366F1', fg: '#fff', weight: 2,  teaser: 'Something too good to be true...',   desc: 'LOL, just kidding. Get back to work.', joke: true },
   { label: 'Desk Upgrade',  icon: '💻', color: '#1E5FD8', fg: '#fff', weight: 14, teaser: 'Your desk, your rules',               desc: '₹1,000 to spend on any computer accessory or desk upgrade. Expense through HR.' },
   { label: 'Fit Fund',      icon: '🏃', color: '#1A8F4C', fg: '#fff', weight: 8,  teaser: 'Move, stretch, lift — your pick',    desc: '₹2,000 for fitness gear, yoga mats, protein, or whatever keeps you going. Expense through HR.' },
-  { label: 'Skill Class',   icon: '🎨', color: '#B84A2A', fg: '#fff', weight: 8,  teaser: 'You\'re about to learn something fun', desc: 'Scratch to reveal your class. ₹2,000 budget — HR books it for you.', scratch: 'skill' },
+  { label: 'Skill Class',   icon: '🎨', color: '#B84A2A', fg: '#fff', weight: 8,  teaser: 'You\'re about to learn something fun', desc: 'Book any skill class you like — pottery, cooking, dance, music, photography, and more. On us. HR books it.', scratch: 'skill' },
   { label: 'Plant + Pot',   icon: '🌱', color: '#5A7A4A', fg: '#fff', weight: 15, teaser: 'Something alive for your space',     desc: 'A real plant, pot included, delivered to your door. Pick what you like — HR will sort it.' },
   { label: 'Pet Hamper',    icon: '🐾', color: '#D4820A', fg: '#fff', weight: 10, teaser: 'Your pet wins too',                  desc: 'Treats and toys for your furry one. No pet? Swap it for a ₹800 Swiggy voucher.', pet: true },
 ];
@@ -1045,12 +1045,13 @@ function pickTeamActivity(item) {
 
 function showScratchCard(prize) {
   _scratchPrize = prize;
-  const pool = prize.scratch === 'team' ? TEAM_SCRATCHES : SKILL_SCRATCHES;
-  const pick = pool[Math.floor(Math.random() * pool.length)];
+  const isTeam = prize.scratch === 'team';
+  const pool   = isTeam ? TEAM_SCRATCHES : null;
+  const pick   = isTeam ? pool[Math.floor(Math.random() * pool.length)] : { icon: '🎨', text: 'Any skill class — your pick' };
   document.getElementById('sc-header').textContent  = prize.label;
-  document.getElementById('sc-sub').textContent     = prize.scratch === 'team'
+  document.getElementById('sc-sub').textContent     = isTeam
     ? 'Scratch to reveal your team outing 🎯'
-    : 'Scratch to reveal your skill class 🎨';
+    : 'Scratch to reveal your reward 🎨';
   document.getElementById('sc-reveal-icon').textContent = pick.icon;
   document.getElementById('sc-reveal-text').textContent = pick.text;
   document.getElementById('sc-result-desc').textContent = prize.desc;
