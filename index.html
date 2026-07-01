@@ -409,6 +409,29 @@
     .scratch-reveal-text { font-size: 22px; font-weight: 800; color: var(--text); }
     .scratch-reveal-desc { font-size: 11px; color: var(--muted); text-align: center; padding: 0 16px; }
 
+    /* ── MYSTERY CARD GRID (Team Activity) ── */
+    .sc-mystery-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      width: 100%; margin: 8px 0;
+    }
+    .sc-mystery-card {
+      background: linear-gradient(145deg, #1E2A27 0%, #131F1C 100%);
+      border: 1.5px solid #D4AF37;
+      border-radius: 14px; aspect-ratio: 4/3;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; transition: transform 0.15s, opacity 0.35s, border-color 0.15s, box-shadow 0.15s;
+      font-size: 24px; color: #D4AF37; font-weight: 800; gap: 4px;
+      position: relative; overflow: hidden; font-family: inherit;
+    }
+    .sc-mystery-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(212,175,55,0.04) 5px, rgba(212,175,55,0.04) 10px);
+    }
+    .sc-mystery-card:hover:not(.faded) { transform: scale(1.06); border-color: #F5E17A; box-shadow: 0 0 14px rgba(212,175,55,0.25); }
+    .sc-mystery-card .mc-label { font-size: 10px; font-weight: 600; color: rgba(212,175,55,0.65); letter-spacing: 0.5px; }
+    .sc-mystery-card.faded { opacity: 0.15; pointer-events: none; }
+    .sc-mystery-card.chosen { border-color: var(--accent); box-shadow: 0 0 16px rgba(19,190,148,0.35); transform: scale(1.08); }
+
     /* ── PET MODAL ── */
     #modal-team-pick {
       display: none; position: fixed; inset: 0; z-index: 100;
@@ -648,8 +671,13 @@
   <div class="modal-bg" onclick="closeScratch()"></div>
   <div class="modal-card scratch-card">
     <div class="m-eyebrow" id="sc-header">Team Activity</div>
-    <div class="scratch-sub" id="sc-sub">Scratch to reveal your team outing</div>
-    <div class="scratch-area">
+    <div class="scratch-sub" id="sc-sub">Pick a card to reveal your outing 🎯</div>
+
+    <!-- Phase 1: Mystery card picker (team only) -->
+    <div id="sc-card-grid" style="display:none"></div>
+
+    <!-- Phase 2: Scratch canvas -->
+    <div class="scratch-area" id="sc-scratch-area" style="display:none">
       <canvas id="sc-canvas" style="position:absolute;inset:0;width:100%;height:100%;border-radius:18px;cursor:crosshair;touch-action:none;z-index:2"></canvas>
       <div class="scratch-reveal" id="sc-reveal">
         <div class="scratch-reveal-icon" id="sc-reveal-icon">🎲</div>
@@ -657,6 +685,7 @@
         <div class="scratch-reveal-desc" id="sc-result-desc"></div>
       </div>
     </div>
+
     <div class="m-actions" id="sc-actions" style="display:none">
       <button class="btn-primary" onclick="closeScratch()" style="flex:1">Let's go! 🎉</button>
     </div>
@@ -739,8 +768,8 @@ const PRIZES = [
   { label: 'Closr Merch',   icon: '👕', color: '#0D4D3A', fg: '#fff', weight: 14, teaser: 'Wear it with pride',                  desc: 'Official Closr gear, your size, shipped to you.' },
   { label: 'Everyone Wins!',icon: '✨', color: '#13BE94', fg: '#fff', weight: 7,  teaser: 'The whole team wins this one',        desc: 'Nandini picks the treat. Everyone gets something.', special: true },
   { label: 'Double Salary', icon: '💸', color: '#6366F1', fg: '#fff', weight: 2,  teaser: 'Something too good to be true...',   desc: 'LOL, just kidding. Get back to work.', joke: true },
-  { label: 'Desk Upgrade',  icon: '💻', color: '#1E5FD8', fg: '#fff', weight: 14, teaser: 'Your desk, your rules',               desc: '₹1,000 to spend on any computer accessory or desk upgrade. Expense through HR.' },
-  { label: 'Fit Fund',      icon: '🏃', color: '#1A8F4C', fg: '#fff', weight: 8,  teaser: 'Move, stretch, lift — your pick',    desc: '₹2,000 for fitness gear, yoga mats, protein, or whatever keeps you going. Expense through HR.' },
+  { label: 'Tech Upgrade',  icon: '💻', color: '#1E5FD8', fg: '#fff', weight: 14, teaser: 'Your desk, your rules',               desc: '₹1,500 for any tech or desk upgrade — monitor stand, mechanical keyboard, webcam, cable organiser. Send HR the receipt. Capped at ₹1,500.' },
+  { label: 'Fit Fund',      icon: '🏃', color: '#1A8F4C', fg: '#fff', weight: 8,  teaser: 'Move, stretch, lift — your pick',    desc: '₹2,000 for anything fitness — whey protein, yoga mat, resistance bands, gym gear. Send HR the receipt. Capped at ₹2,000.' },
   { label: 'Skill Class',   icon: '🎨', color: '#B84A2A', fg: '#fff', weight: 8,  teaser: 'You\'re about to learn something fun', desc: 'Book any skill class you like — pottery, cooking, dance, music, photography, and more. On us. HR books it.', scratch: 'skill' },
   { label: 'Plant + Pot',   icon: '🌱', color: '#5A7A4A', fg: '#fff', weight: 15, teaser: 'Something alive for your space',     desc: 'A real plant, pot included, delivered to your door. Pick what you like — HR will sort it.' },
   { label: 'Pet Hamper',    icon: '🐾', color: '#D4820A', fg: '#fff', weight: 10, teaser: 'Your pet wins too',                  desc: 'Treats and toys for your furry one. No pet? Swap it for a ₹800 Swiggy voucher.', pet: true },
@@ -1019,46 +1048,78 @@ function showJoke(prize) {
 // ══════════════════════════════════════════════
 // SCRATCH CARD
 // ══════════════════════════════════════════════
-let _scratchPrize = null;
-function showTeamPick(prize) {
-  _scratchPrize = prize;
-  const grid = document.getElementById('team-pick-grid');
-  grid.innerHTML = '';
-  TEAM_SCRATCHES.forEach(item => {
-    const btn = document.createElement('button');
-    btn.className = 'team-pick-option';
-    btn.innerHTML = '<span class="tp-icon">' + item.icon + '</span><span class="tp-text">' + item.text + '</span>';
-    btn.onclick = () => pickTeamActivity(item);
-    grid.appendChild(btn);
-  });
-  document.getElementById('modal-team-pick').classList.add('open');
-}
-
-function pickTeamActivity(item) {
-  document.getElementById('modal-team-pick').classList.remove('open');
-  const prize = Object.assign({}, _scratchPrize, {
-    teaser: item.text,
-    desc: item.icon + '  ' + item.text + ' — nearest to you. HR will coordinate. Enjoy!'
-  });
-  showResult(prize);
-}
+let _scratchPrize  = null;
+let _teamShuffled  = null;
 
 function showScratchCard(prize) {
   _scratchPrize = prize;
-  const isTeam = prize.scratch === 'team';
-  const pool   = isTeam ? TEAM_SCRATCHES : null;
-  const pick   = isTeam ? pool[Math.floor(Math.random() * pool.length)] : { icon: '🎨', text: 'Any skill class — your pick' };
+  const isTeam  = prize.scratch === 'team';
+
   document.getElementById('sc-header').textContent  = prize.label;
-  document.getElementById('sc-sub').textContent     = isTeam
-    ? 'Scratch to reveal your team outing 🎯'
-    : 'Scratch to reveal your reward 🎨';
-  document.getElementById('sc-reveal-icon').textContent = pick.icon;
-  document.getElementById('sc-reveal-text').textContent = pick.text;
-  document.getElementById('sc-result-desc').textContent = prize.desc;
-  document.getElementById('sc-reveal').style.opacity = '1';
   document.getElementById('sc-actions').style.display = 'none';
+
+  const cardGrid    = document.getElementById('sc-card-grid');
+  const scratchArea = document.getElementById('sc-scratch-area');
+
+  if (isTeam) {
+    // Phase 1: show 6 mystery cards
+    document.getElementById('sc-sub').textContent = 'Pick a card to reveal your outing 🎯';
+    _teamShuffled = [...TEAM_SCRATCHES].sort(() => Math.random() - 0.5);
+    cardGrid.innerHTML = '';
+    cardGrid.className = 'sc-mystery-grid';
+    for (let i = 0; i < _teamShuffled.length; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'sc-mystery-card';
+      btn.innerHTML = '<span>🎴</span><span class="mc-label">Card ' + (i + 1) + '</span>';
+      btn.dataset.idx = i;
+      btn.onclick = () => pickMysteryCard(i);
+      cardGrid.appendChild(btn);
+    }
+    cardGrid.style.display = 'grid';
+    scratchArea.style.display = 'none';
+  } else {
+    // Skill: go straight to canvas
+    document.getElementById('sc-sub').textContent = 'Scratch to reveal your reward 🎨';
+    document.getElementById('sc-reveal-icon').textContent = '🎨';
+    document.getElementById('sc-reveal-text').textContent = 'Any skill class — your pick';
+    document.getElementById('sc-result-desc').textContent = prize.desc;
+    document.getElementById('sc-reveal').style.opacity = '1';
+    cardGrid.style.display = 'none';
+    scratchArea.style.display = '';
+    requestAnimationFrame(() => initScratchCanvas());
+  }
+
   document.getElementById('modal-scratch').classList.add('open');
-  requestAnimationFrame(() => initScratchCanvas());
+}
+
+function pickMysteryCard(idx) {
+  const pick = _teamShuffled[idx];
+
+  // Highlight chosen, fade the rest
+  document.querySelectorAll('.sc-mystery-card').forEach((c, i) => {
+    if (i === idx) c.classList.add('chosen');
+    else c.classList.add('faded');
+  });
+
+  // Transition to scratch canvas after brief pause
+  setTimeout(() => {
+    const cardGrid    = document.getElementById('sc-card-grid');
+    const scratchArea = document.getElementById('sc-scratch-area');
+
+    document.getElementById('sc-sub').textContent             = 'Now scratch to reveal! ✨';
+    document.getElementById('sc-reveal-icon').textContent     = pick.icon;
+    document.getElementById('sc-reveal-text').textContent     = pick.text;
+    document.getElementById('sc-result-desc').textContent     = _scratchPrize.desc;
+    document.getElementById('sc-reveal').style.opacity        = '1';
+
+    cardGrid.style.display    = 'none';
+    scratchArea.style.display = '';
+    requestAnimationFrame(() => initScratchCanvas());
+  }, 420);
+}
+
+function showTeamPick(prize) {
+  // Legacy — no longer used, kept for safety
 }
 
 function initScratchCanvas() {
@@ -1613,85 +1674,4 @@ async function onToken(resp) {
 
   try {
     const profile = await gFetch('https://www.googleapis.com/oauth2/v3/userinfo', resp.access_token);
-    const email   = (profile.email || '').toLowerCase();
-    if (!email) throw new Error('Could not read your email address.');
-    accessToken = resp.access_token;
-    playerEmail = email;
-
-    document.getElementById('loading-text').textContent = 'Checking the sheet...';
-
-    const range    = encodeURIComponent(`${CONFIG.SHEET_TAB}!A:C`);
-    const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}`;
-    const sheet    = await gFetch(sheetUrl, resp.access_token);
-    const rows     = (sheet.values || []).slice(1);
-    const rowIdx   = rows.findIndex(r => (r[0] || '').toLowerCase().trim() === email);
-    const match    = rowIdx >= 0 ? rows[rowIdx] : null;
-    playerRowIndex = rowIdx + 2;
-
-    if (!match) {
-      showStatus('🤷', 'You\'re not on the list',
-        `${profile.email} wasn't found in the sheet. Ask the admin to add you.`);
-      return;
-    }
-
-    const name   = (match[1] || profile.given_name || profile.name || 'You').trim();
-    const tokens = parseInt(match[2], 10) || 0;
-
-    if (tokens <= 0) {
-      showStatus('😔', `Hey ${name}`,
-        'You have 0 tokens this month. Come back when the next cycle closes.');
-      return;
-    }
-
-    loadWheel(name, tokens);
-
-  } catch (err) {
-    showStatus('⚠️', 'Something went wrong', err.message);
-  }
-}
-
-async function gFetch(url, token) {
-  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-  if (!r.ok) {
-    const txt = await r.text();
-    throw new Error(`API ${r.status}: ${txt.slice(0, 200)}`);
-  }
-  return r.json();
-}
-
-// ══════════════════════════════════════════════
-// PAGE INIT — runs last, after all function defs
-// ══════════════════════════════════════════════
-function pageInit() {
-  try {
-    canvas = document.getElementById('wheel-canvas');
-    if (canvas) {
-      ctx = canvas.getContext('2d');
-      sizeCanvas();
-      drawWheel(0);
-    }
-    window.addEventListener('resize', () => { sizeCanvas(); drawWheel(currentAngle); });
-    renderPrizeSidebar();
-
-    // Dark background fill
-    const bc = document.getElementById('bg-canvas');
-    if (bc) {
-      function fillBg() {
-        bc.width  = window.innerWidth;
-        bc.height = window.innerHeight;
-        const bctx = bc.getContext('2d');
-        bctx.fillStyle = '#070909';
-        bctx.fillRect(0, 0, bc.width, bc.height);
-      }
-      fillBg();
-      window.addEventListener('resize', fillBg);
-    }
-  } catch(e) {
-    console.error('pageInit error:', e);
-  }
-}
-
-pageInit();
-</script>
-</body>
-</html>
+    c
