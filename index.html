@@ -1674,4 +1674,85 @@ async function onToken(resp) {
 
   try {
     const profile = await gFetch('https://www.googleapis.com/oauth2/v3/userinfo', resp.access_token);
-    c
+    const email   = (profile.email || '').toLowerCase();
+    if (!email) throw new Error('Could not read your email address.');
+    accessToken = resp.access_token;
+    playerEmail = email;
+
+    document.getElementById('loading-text').textContent = 'Checking the sheet...';
+
+    const range    = encodeURIComponent(`${CONFIG.SHEET_TAB}!A:C`);
+    const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}`;
+    const sheet    = await gFetch(sheetUrl, resp.access_token);
+    const rows     = (sheet.values || []).slice(1);
+    const rowIdx   = rows.findIndex(r => (r[0] || '').toLowerCase().trim() === email);
+    const match    = rowIdx >= 0 ? rows[rowIdx] : null;
+    playerRowIndex = rowIdx + 2;
+
+    if (!match) {
+      showStatus('🤷', 'You\'re not on the list',
+        `${profile.email} wasn't found in the sheet. Ask the admin to add you.`);
+      return;
+    }
+
+    const name   = (match[1] || profile.given_name || profile.name || 'You').trim();
+    const tokens = parseInt(match[2], 10) || 0;
+
+    if (tokens <= 0) {
+      showStatus('😔', `Hey ${name}`,
+        'You have 0 tokens this month. Come back when the next cycle closes.');
+      return;
+    }
+
+    loadWheel(name, tokens);
+
+  } catch (err) {
+    showStatus('⚠️', 'Something went wrong', err.message);
+  }
+}
+
+async function gFetch(url, token) {
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`API ${r.status}: ${txt.slice(0, 200)}`);
+  }
+  return r.json();
+}
+
+// ══════════════════════════════════════════════
+// PAGE INIT — runs last, after all function defs
+// ══════════════════════════════════════════════
+function pageInit() {
+  try {
+    canvas = document.getElementById('wheel-canvas');
+    if (canvas) {
+      ctx = canvas.getContext('2d');
+      sizeCanvas();
+      drawWheel(0);
+    }
+    window.addEventListener('resize', () => { sizeCanvas(); drawWheel(currentAngle); });
+    renderPrizeSidebar();
+
+    // Dark background fill
+    const bc = document.getElementById('bg-canvas');
+    if (bc) {
+      function fillBg() {
+        bc.width  = window.innerWidth;
+        bc.height = window.innerHeight;
+        const bctx = bc.getContext('2d');
+        bctx.fillStyle = '#070909';
+        bctx.fillRect(0, 0, bc.width, bc.height);
+      }
+      fillBg();
+      window.addEventListener('resize', fillBg);
+    }
+  } catch(e) {
+    console.error('pageInit error:', e);
+  }
+}
+
+pageInit();
+</script>
+</body>
+</html>
